@@ -1,3 +1,4 @@
 web3>=5.26.0
 requests>=2.26.0
+Flask>=2.0.0
 # pymongo  # Uncomment if you want to use MongoDB

@@ -1,6 +1,6 @@
 # CarlosScan
 
-A command-line tool for fetching and displaying DeFi project details, including pool information, TVL, APR, and user stakes.
+A tool for fetching and displaying DeFi project details, including pool information, TVL, APR, and user stakes. Available as both a command-line tool and a web dashboard.
 
 ## Installation
 
@@ -15,7 +15,24 @@ A command-line tool for fetching and displaying DeFi project details, including 
    pip install -r requirements.txt
    ```
 
-## Usage
+## Web Dashboard Usage
+
+Start the web dashboard:
+```
+python app.py
+```
+
+Then open your browser to [http://localhost:5000](http://localhost:5000) to access the dashboard.
+
+The dashboard provides:
+- Project selection dropdown
+- Strategy selection (where available)
+- Wallet address input
+- Option toggles for LP summary, parallel processing, etc.
+- Visual display of pools and metrics
+- Detailed view of your positions
+
+## Command-Line Usage
 
 Basic usage:
 ```

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CarlosScan Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container-fluid">
+        <header class="py-3 mb-4 border-bottom">
+            <div class="container d-flex flex-wrap justify-content-center">
+                <span class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-dark text-decoration-none">
+                    <i class="bi bi-bar-chart-fill me-2"></i>
+                    <span class="fs-4">CarlosScan Dashboard</span>
+                </span>
+            </div>
+        </header>
+
+        <div class="row">
+            <!-- Sidebar with form -->
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Query Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="queryForm">
+                            <div class="mb-3">
+                                <label for="projectSelect" class="form-label">Project</label>
+                                <select class="form-select" id="projectSelect" required>
+                                    <option value="" selected disabled>Select a project</option>
+                                    {% for project in projects %}
+                                    <option value="{{ project.id }}">{{ project.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3" id="strategySelectContainer" style="display: none;">
+                                <label for="strategySelect" class="form-label">Strategy</label>
+                                <select class="form-select" id="strategySelect">
+                                    <option value="" selected>None (use wallet)</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="walletInput" class="form-label">Wallet Address</label>
+                                <input type="text" class="form-control" id="walletInput" placeholder="0x..." required>
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="lpSummaryCheck">
+                                <label class="form-check-label" for="lpSummaryCheck">Include LP Summary</label>
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="parallelCheck">
+                                <label class="form-check-label" for="parallelCheck">Enable Parallel Fetching</label>
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="hideNoRewardsCheck">
+                                <label class="form-check-label" for="hideNoRewardsCheck">Hide No Rewards</label>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100" id="fetchButton">Fetch Data</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main content area -->
+            <div class="col-md-9">
+                <!-- Loading indicator -->
+                <div id="loadingIndicator" class="d-none">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Fetching data, please wait...</p>
+                    </div>
+                </div>
+
+                <!-- Error display -->
+                <div id="errorDisplay" class="d-none">
+                    <div class="alert alert-danger" role="alert">
+                        <h4 class="alert-heading">Error!</h4>
+                        <p id="errorMessage"></p>
+                    </div>
+                </div>
+
+                <!-- Results area -->
+                <div id="resultsArea" class="d-none">
+                    <!-- Project overview card -->
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Project Overview</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <table class="table table-sm">
+                                        <tbody>
+                                            <tr>
+                                                <th>Project:</th>
+                                                <td id="projectName"></td>
+                                            </tr>
+                                            <tr>
+                                                <th>Native Token:</th>
+                                                <td id="nativeTokenInfo"></td>
+                                            </tr>
+                                            <tr>
+                                                <th>Token Price:</th>
+                                                <td id="tokenPrice"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <table class="table table-sm">
+                                        <tbody>
+                                            <tr>
+                                                <th>Total TVL:</th>
+                                                <td id="totalTvl"></td>
+                                            </tr>
+                                            <tr>
+                                                <th>Reward Rate:</th>
+                                                <td id="rewardRate"></td>
+                                            </tr>
+                                            <tr>
+                                                <th>Total User Value:</th>
+                                                <td id="totalUserValue"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User pools card -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Your Pools</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="noUserPools" class="alert alert-info d-none">
+                                No pools found for this wallet.
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover" id="userPoolsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Pool ID</th>
+                                            <th>Token</th>
+                                            <th>TVL</th>
+                                            <th>APR</th>
+                                            <th>Daily Rewards</th>
+                                            <th>User Value</th>
+                                            <th>Pending Rewards</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="userPoolsBody">
+                                        <!-- User pools will be added here dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- All pools accordion -->
+                    <div class="accordion mb-4" id="allPoolsAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="allPoolsHeading">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#allPoolsCollapse" aria-expanded="false" aria-controls="allPoolsCollapse">
+                                    All Available Pools
+                                </button>
+                            </h2>
+                            <div id="allPoolsCollapse" class="accordion-collapse collapse" aria-labelledby="allPoolsHeading" data-bs-parent="#allPoolsAccordion">
+                                <div class="accordion-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover" id="allPoolsTable">
+                                            <thead>
+                                                <tr>
+                                                    <th>Pool ID</th>
+                                                    <th>Token</th>
+                                                    <th>TVL</th>
+                                                    <th>Weight</th>
+                                                    <th>APR</th>
+                                                    <th>Daily Rewards</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="allPoolsBody">
+                                                <!-- All pools will be added here dynamically -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="py-3 my-4">
+            <p class="text-center text-muted">© 2025 CarlosScan Dashboard</p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>
