@@ -3,41 +3,25 @@ import token_fetcher
 import pools_fetcher
 
 def fetch_all(chain, project, wallet, strategy=""):
-  print(f"Fetching {project['name']} on {chain['name']} for {wallet}...")
-  
   # Use strategy if provided
   if strategy and 'violin_strategy' in project and strategy in project['violin_strategy']:
     wallet = project['violin_strategy'][strategy]
-    print(f"Using {strategy} strategy: {wallet}")
   
   web3 = Web3(Web3.HTTPProvider(chain['rpc']))
   
   # Ensure addresses are properly checksummed
   try:
-    print(f"Native token address (before checksum): {project['native_token_address']}")
     if not Web3.is_checksum_address(project['native_token_address']):
       project['native_token_address'] = Web3.to_checksum_address(project['native_token_address'])
-      print(f"Checksummed native token address: {project['native_token_address']}")
-    else:
-      print(f"Native token address is already checksummed: {project['native_token_address']}")
     
     if isinstance(project['mc_address'], str):
-      print(f"MC address (before checksum): {project['mc_address']}")
       if not Web3.is_checksum_address(project['mc_address']):
         project['mc_address'] = Web3.to_checksum_address(project['mc_address'])
-        print(f"Checksummed MC address: {project['mc_address']}")
-      else:
-        print(f"MC address is already checksummed: {project['mc_address']}")
     elif isinstance(project['mc_address'], list):
       project['mc_address'] = [Web3.to_checksum_address(addr) if not Web3.is_checksum_address(addr) else addr for addr in project['mc_address']]
-      print(f"Checksummed MC addresses: {project['mc_address']}")
     
-    print(f"Wallet address (before checksum): {wallet}")
     if not Web3.is_checksum_address(wallet):
       wallet = Web3.to_checksum_address(wallet)
-      print(f"Checksummed wallet address: {wallet}")
-    else:
-      print(f"Wallet address is already checksummed: {wallet}")
   except Exception as e:
     print(f"Error while checksumming addresses: {e}")
   
@@ -48,7 +32,6 @@ def fetch_all(chain, project, wallet, strategy=""):
     native_name = native_token.functions.name().call()
     native_symbol = native_token.functions.symbol().call()
   except Exception as e:
-    print(f"Error getting native token information: {e}")
     native_decimals = 18  # Default to 18 decimals
     native_name = "Unknown Token"
     native_symbol = "UNKNOWN"

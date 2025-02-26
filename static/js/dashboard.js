@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         if (manualPrice) {
-            console.log(`Using manual price: $${manualPrice}`);
         }
         
         // Show loading indicator
