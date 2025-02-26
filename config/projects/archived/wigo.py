@@ -3,7 +3,7 @@ config = {
     "chain": "ftm",
     "mc_address": "0xA1a938855735C0651A6CfE2E93a32A28A236d0E9",
     "violin_strategy": {
-        "carlos": "0x1eAfcb3B744Df54aE99abeE0417570A03Ab42652"
+        "carlos": "0x3bAd1A5fCc6b0C6848C929E7c9E234AdE9055E7a"
     },
     "native_token_address": "0xe992beab6659bff447893641a378fbbf031c5bd6",
     "reward_rate_function": "wigoPerSecond()",

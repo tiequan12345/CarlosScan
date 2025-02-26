@@ -27,6 +27,60 @@ document.addEventListener('DOMContentLoaded', function() {
     const noUserPools = document.getElementById('noUserPools');
     const allPoolsBody = document.getElementById('allPoolsBody');
     
+    // Auto-refresh functionality
+    let autoRefreshInterval = null;
+    const REFRESH_INTERVAL = 3 * 60 * 1000; // 3 minutes in milliseconds
+
+    function startAutoRefresh() {
+        // Clear any existing interval
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+        }
+        
+        // Set up new interval
+        autoRefreshInterval = setInterval(() => {
+            // Only refresh if we have a project and wallet
+            const project = document.getElementById('project').value;
+            const wallet = document.getElementById('wallet').value;
+            
+            if (project && wallet) {
+                console.log("Auto-refreshing data...");
+                fetchData();
+                
+                // Update last refresh time indicator
+                const refreshTime = new Date().toLocaleTimeString();
+                document.getElementById('last-refresh').textContent = `Last refreshed: ${refreshTime}`;
+            }
+        }, REFRESH_INTERVAL);
+        
+        console.log("Auto-refresh started - will update every 3 minutes");
+    }
+
+    // Start auto-refresh when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+        startAutoRefresh();
+        
+        // Add a last refresh indicator to the page
+        const refreshIndicator = document.createElement('div');
+        refreshIndicator.id = 'last-refresh';
+        refreshIndicator.className = 'text-muted small mt-2';
+        refreshIndicator.textContent = 'Auto-refresh enabled (3 min)';
+        
+        // Insert after the fetch button
+        const fetchButton = document.querySelector('button[onclick="fetchData()"]');
+        if (fetchButton && fetchButton.parentNode) {
+            fetchButton.parentNode.appendChild(refreshIndicator);
+        }
+    });
+
+    // Restart auto-refresh when form is submitted
+    function fetchData() {
+        // Existing fetchData code...
+        
+        // After fetching data, restart the auto-refresh timer
+        startAutoRefresh();
+    }
+    
     // When project changes, check if it has strategies
     projectSelect.addEventListener('change', function() {
         const projectId = this.value;
