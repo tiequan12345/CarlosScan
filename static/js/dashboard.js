@@ -78,28 +78,25 @@ document.addEventListener('DOMContentLoaded', function() {
         fetchProjectData();
     });
     
-    // Add manual price input functionality
-    const manualPriceContainer = document.createElement('div');
-    manualPriceContainer.className = 'mb-3';
-    manualPriceContainer.innerHTML = `
-        <label for="manual-price" class="form-label">Override Token Price (USD):</label>
-        <div class="input-group">
-            <span class="input-group-text">$</span>
-            <input type="number" class="form-control" id="manual-price" placeholder="Enter price" step="0.000001" min="0">
-            <button class="btn btn-primary" type="button" id="apply-price">Apply</button>
-        </div>
-        <small class="form-text text-muted">Leave empty to use API price.</small>
-    `;
+    // Add button to apply manual price
+    const applyPriceBtn = document.createElement('button');
+    applyPriceBtn.type = 'button';
+    applyPriceBtn.id = 'applyPriceBtn';
+    applyPriceBtn.className = 'btn btn-primary mt-2';
+    applyPriceBtn.textContent = 'Apply Price Override';
     
-    // Insert after the wallet input
-    const walletInput = document.querySelector('#walletInput');
-    if (walletInput) {
-        walletInput.closest('.mb-3').after(manualPriceContainer);
+    // Find the manual price input group and append the button
+    const manualPriceInput = document.getElementById('manualPriceInput');
+    if (manualPriceInput) {
+        const inputGroup = manualPriceInput.closest('.input-group');
+        if (inputGroup && inputGroup.parentNode) {
+            inputGroup.parentNode.appendChild(applyPriceBtn);
+        }
     }
     
     // Button to apply manual price
-    document.getElementById('apply-price').addEventListener('click', function() {
-        const manualPrice = parseFloat(document.getElementById('manual-price').value);
+    document.getElementById('applyPriceBtn').addEventListener('click', function() {
+        const manualPrice = parseFloat(document.getElementById('manualPriceInput').value);
         if (!isNaN(manualPrice) && manualPrice > 0) {
             // Re-fetch data with manual price
             fetchProjectData(true, manualPrice);
@@ -130,7 +127,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (this.checked) {
             // Start auto-refresh
             autoRefreshInterval = setInterval(() => {
-                const manualPrice = parseFloat(document.getElementById('manual-price').value);
+                const manualPrice = parseFloat(document.getElementById('manualPriceInput').value);
                 fetchProjectData(false, !isNaN(manualPrice) && manualPrice > 0 ? manualPrice : null);
             }, 60000); // Every 60 seconds
         } else {
