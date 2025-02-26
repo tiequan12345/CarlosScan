@@ -7,6 +7,7 @@ import traceback
 import requests
 import time
 from threading import Lock
+import os
 
 app = Flask(__name__)
 
@@ -39,7 +40,8 @@ def get_token_price(chain_id, token_address):
         
         # If not, fetch new price
         try:
-            url = f"https://api.dexscreener.com/latest/dex/pairs/{chain_id}/{token_address}"
+            dexscreener_api_url = os.environ.get("DEXSCREENER_API_URL", "https://api.dexscreener.com/latest/dex/pairs")
+            url = f"{dexscreener_api_url}/{chain_id}/{token_address}"
             print(f"Fetching price from {url}")
             response = requests.get(url, timeout=10)
             

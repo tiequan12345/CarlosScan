@@ -1,13 +1,14 @@
+import os
+
 config = {
     "name": "eth",
     "pricer": "0x393c80eD875eDe4dc9da8E5C9CA8959c5A36d6b4",
-    "rpc": "https://rpc.ankr.com/eth",
     "block_interval": 13,
-    #"api": "https://api.etherscan.io/api",
-    #"apikey": "4IHUST2E2QXEFAAJZIQMDVD45YBI3JDC22",
-    #"explorer": "https://etherscan.io/"
 }
 
+# Fetch RPC from environment variable or provide a default
+config["rpc"] = os.environ.get("ETH_RPC_URL", "DEFAULT_ETH_RPC_URL")
+    
 def get_config():
     return config
     
