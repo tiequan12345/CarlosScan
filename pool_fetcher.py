@@ -2,9 +2,21 @@
 import token_fetcher
 
 def get_pool(web3, pricer, project, pool_data, lp_summary=False):
-  price = pricer.functions.getPrice(pool_data["token_address"], "0x").call()
+  try:
+    price = pricer.functions.getPrice(pool_data["token_address"], "0x").call()
+  except Exception as e:
+    print(f"Error getting price for token {pool_data['token_address']}: {e}")
+    # Default to 1.0 as price if fetching fails
+    price = 1e18  # Set a default price of 1.0
+  
   token = pool_data["token"]
-  decimals = token.functions.decimals().call()
+  
+  try:
+    decimals = token.functions.decimals().call()
+  except Exception as e:
+    print(f"Error getting decimals for token {pool_data['token_address']}: {e}")
+    decimals = 18  # Default to 18 decimals
+    
   user_value = price * pool_data["user_stake"] /1e18/(10**decimals)
   pending_rewards = pool_data["pending_rewards"]
   

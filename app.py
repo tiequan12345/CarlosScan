@@ -29,6 +29,9 @@ def get_token_price(chain_id, token_address):
     """Get token price from DexScreener API with caching"""
     cache_key = f"{chain_id}_{token_address}"
     
+    # Log the token address
+    print(f"Getting price for token: {token_address} on chain: {chain_id}")
+    
     with price_lock:
         current_time = time.time()
         # Check if we have a cached price that's still fresh
@@ -40,30 +43,100 @@ def get_token_price(chain_id, token_address):
         
         # If not, fetch new price
         try:
-            dexscreener_api_url = os.environ.get("DEXSCREENER_API_URL", "https://api.dexscreener.com/latest/dex/pairs")
-            url = f"{dexscreener_api_url}/{chain_id}/{token_address}"
-            print(f"Fetching price from {url}")
-            response = requests.get(url, timeout=10)
+            # Try multiple price sources
+            price = None
             
-            if response.status_code == 200:
-                data = response.json()
-                if 'pairs' in data and data['pairs'] and len(data['pairs']) > 0:
-                    price = float(data['pairs'][0]['priceUsd'])
-                    print(f"Got new price for {token_address}: ${price}")
-                    # Update cache
-                    cache['token_prices'][cache_key] = price
-                    cache['last_price_update'][cache_key] = current_time
-                    return price
+            # 1. Try DexScreener API first
+            try:
+                # Try different API endpoints - first for pairs
+                dexscreener_api_url = os.environ.get("DEXSCREENER_API_URL", "https://api.dexscreener.com/latest/dex/pairs")
+                url = f"{dexscreener_api_url}/{chain_id}/{token_address}"
+                print(f"Fetching price from DexScreener pairs API: {url}")
+                response = requests.get(url, timeout=10)
+                response_text = response.text
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if data and 'pairs' in data and data['pairs'] and len(data['pairs']) > 0:
+                        price = float(data['pairs'][0]['priceUsd'])
+                        print(f"Got new price from DexScreener pairs API for {token_address}: ${price}")
+                    else:
+                        print(f"DexScreener pairs API returned no data: {response_text}")
+                        
+                        # If pairs endpoint failed, try tokens endpoint
+                        tokens_url = f"https://api.dexscreener.com/latest/dex/tokens/{token_address}"
+                        print(f"Trying DexScreener tokens API: {tokens_url}")
+                        tokens_response = requests.get(tokens_url, timeout=10)
+                        
+                        if tokens_response.status_code == 200:
+                            tokens_data = tokens_response.json()
+                            if tokens_data and 'pairs' in tokens_data and tokens_data['pairs'] and len(tokens_data['pairs']) > 0:
+                                for pair in tokens_data['pairs']:
+                                    if 'chainId' in pair and pair['chainId'] == chain_id:
+                                        price = float(pair['priceUsd'])
+                                        print(f"Got new price from DexScreener tokens API: ${price}")
+                                        break
+                            else:
+                                print(f"DexScreener tokens API returned no data: {tokens_response.text}")
+                        else:
+                            print(f"DexScreener tokens API failed with status {tokens_response.status_code}")
+                else:
+                    print(f"DexScreener API failed with status {response.status_code}: {response_text}")
+            except Exception as e:
+                print(f"Error using DexScreener: {str(e)}")
             
-            # If we get here, something went wrong with the API call
-            print(f"Failed to get price for {token_address} on {chain_id}: {response.status_code}")
-            # Return cached price if available, otherwise None
-            return cache['token_prices'].get(cache_key)
+            # 2. Try DexTools API as backup if configured (add your API key in env)
+            if price is None and os.environ.get("DEXTOOLS_API_KEY"):
+                try:
+                    headers = {"X-API-KEY": os.environ.get("DEXTOOLS_API_KEY")}
+                    dextools_url = f"https://api.dextools.io/v1/token/{chain_id}/{token_address}"
+                    print(f"Trying DexTools API: {dextools_url}")
+                    response = requests.get(dextools_url, headers=headers, timeout=10)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        if data and 'data' in data and 'price' in data['data']:
+                            price = float(data['data']['price'])
+                            print(f"Got new price from DexTools for {token_address}: ${price}")
+                except Exception as e:
+                    print(f"Error using DexTools API: {str(e)}")
+            
+            # Try alternative address formats (some APIs require lowercase)
+            if price is None:
+                try:
+                    # Try lowercase address
+                    alt_token_address = token_address.lower()
+                    if alt_token_address != token_address:
+                        print(f"Trying DexScreener with lowercase address: {alt_token_address}")
+                        alt_url = f"https://api.dexscreener.com/latest/dex/tokens/{alt_token_address}"
+                        alt_response = requests.get(alt_url, timeout=10)
+                        
+                        if alt_response.status_code == 200:
+                            alt_data = alt_response.json()
+                            if alt_data and 'pairs' in alt_data and alt_data['pairs'] and len(alt_data['pairs']) > 0:
+                                for pair in alt_data['pairs']:
+                                    if 'chainId' in pair and pair['chainId'] == chain_id:
+                                        price = float(pair['priceUsd'])
+                                        print(f"Got new price from DexScreener with lowercase address: ${price}")
+                                        break
+                except Exception as alt_err:
+                    print(f"Error trying alternative address format: {str(alt_err)}")
+            
+            # If we found a price, update the cache
+            if price is not None and price > 0:
+                cache['token_prices'][cache_key] = price
+                cache['last_price_update'][cache_key] = current_time
+                return price
+            else:
+                print(f"Failed to get price for {token_address} on {chain_id} from all sources")
+                print(f"Using default price of $1.0 for {token_address}")
+                # Return cached price if available, otherwise None
+                return cache['token_prices'].get(cache_key, 1.0)  # Default to 1.0 if no price available
             
         except Exception as e:
-            print(f"Error fetching token price: {str(e)}")
+            print(f"Error in price fetching process: {str(e)}")
             # Return cached price if available, otherwise None
-            return cache['token_prices'].get(cache_key)
+            return cache['token_prices'].get(cache_key, 1.0)  # Default to 1.0 if no price available
 
 def get_projects_and_chains():
     """Get list of available projects and chains"""
@@ -164,36 +237,57 @@ def index():
 def fetch_data():
     """Fetch project data based on form input"""
     try:
-        data = request.json
-        project_id = data.get('project')
-        wallet = data.get('wallet')
+        print("Received fetch-data request")
+        data = request.json or {}
+        print(f"Request data: {data}")
+        
+        project_id = data.get('project', 'hog')
+        wallet = data.get('wallet', '0x81da1B2eeB44cb139C3B0643Dc10AbC2C0420003')
         strategy = data.get('strategy', '')
         lp_summary = data.get('lp_summary', False)
         parallel = data.get('parallel', False)
         hide_no_rewards = data.get('hide_no_rewards', False)
+        manual_price = data.get('manual_price', None)  # Allow manually setting a price
         
-        if not project_id or not wallet:
-            return jsonify({'error': 'Missing required parameters'}), 400
+        print(f"Processing request for project: {project_id}, wallet: {wallet}")
             
         # Fetch the configuration
-        chain, project = config_fetcher.fetch_configs({
-            "project_id": project_id,
-            "wallet": wallet,
-            "strategy": strategy,
-            "lp_summary": lp_summary,
-            "parallel": parallel,
-            "hide_no_rewards": hide_no_rewards
-        })
+        try:
+            chain, project = config_fetcher.fetch_configs({
+                "project_id": project_id,
+                "wallet": wallet,
+                "strategy": strategy,
+                "lp_summary": lp_summary,
+                "parallel": parallel,
+                "hide_no_rewards": hide_no_rewards
+            })
+            print(f"Successfully loaded config for chain: {chain['name']}")
+        except Exception as config_error:
+            print(f"Error loading project configuration: {str(config_error)}")
+            print(traceback.format_exc())
+            return jsonify({'error': f'Configuration error: {str(config_error)}'}), 500
+        
+        # Set manual price if provided
+        if manual_price is not None and manual_price > 0:
+            project['native_price'] = float(manual_price)
+            print(f"Using manually provided price: ${manual_price}")
         
         # Fetch the project data
-        fetched_project = project_fetcher.fetch_all(chain, project, wallet, strategy)
+        try:
+            fetched_project = project_fetcher.fetch_all(chain, project, wallet, strategy)
+            print(f"Successfully fetched project data")
+        except Exception as fetch_error:
+            print(f"Error fetching project data: {str(fetch_error)}")
+            print(traceback.format_exc())
+            return jsonify({'error': f'Data fetch error: {str(fetch_error)}'}), 500
         
         if not fetched_project:
-            return jsonify({'error': 'Failed to fetch project data'}), 500
+            print("Empty project data returned")
+            return jsonify({'error': 'Failed to fetch project data - empty result'}), 500
         
         # Update token price from DexScreener if chain and token address are available
-        if 'chain_id' in chain and 'native_token_address' in fetched_project:
-            chain_id = chain['chain_id']
+        chain_id = chain.get('chain_id', chain.get('name', ''))  # Use chain name as fallback
+        if chain_id and 'native_token_address' in fetched_project:
             token_address = fetched_project['native_token_address']
             
             print(f"Before price update: native_price = ${fetched_project['native_price']}")
@@ -203,6 +297,7 @@ def fetch_data():
             if updated_price is not None:
                 # Update the price in the fetched project data
                 print(f"Updating native_price from ${fetched_project['native_price']} to ${updated_price}")
+                old_price = fetched_project['native_price']
                 fetched_project['native_price'] = updated_price
                 
                 # Recalculate dollar rewards per second with new price
@@ -210,12 +305,22 @@ def fetch_data():
                     old_dollar_rewards = fetched_project['dollar_rewards_per_second']
                     fetched_project['dollar_rewards_per_second'] = fetched_project['reward_rate'] * updated_price
                     print(f"Updated dollar_rewards_per_second from ${old_dollar_rewards} to ${fetched_project['dollar_rewards_per_second']}")
+                
+                # Update pending rewards for each pool with the new price ratio
+                price_ratio = updated_price / old_price if old_price > 0 else 1
+                for pool in fetched_project['pools']:
+                    if 'pending_rewards' in pool:
+                        pool['pending_rewards'] = pool['pending_rewards'] * price_ratio
+                
+                # Update total pending rewards
+                if 'total_pending' in fetched_project:
+                    fetched_project['total_pending'] = fetched_project['total_pending'] * price_ratio
             else:
                 print("Failed to get updated price, using existing price")
         else:
             print("Missing chain_id or native_token_address, cannot update price")
-            if 'chain_id' not in chain:
-                print("Missing chain_id")
+            if not chain_id:
+                print(f"Missing chain_id, attempted to use: {chain_id}")
             if 'native_token_address' not in fetched_project:
                 print("Missing native_token_address")
         

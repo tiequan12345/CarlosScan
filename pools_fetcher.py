@@ -16,7 +16,21 @@ def fetch_pool(data):
   
   try:
     web3 = Web3(Web3.HTTPProvider(chain['rpc']))
-    pricer = web3.eth.contract(address=chain['pricer'], abi='[{"inputs":[{"internalType":"address","name":"_owner","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"contract IPricer","name":"oldImplementation","type":"address"},{"indexed":true,"internalType":"contract IPricer","name":"newImplementation","type":"address"}],"name":"ImplementationChanged","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousPendingOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newPendingOwner","type":"address"}],"name":"PendingOwnershipTransferred","type":"event"},{"inputs":[{"internalType":"address","name":"asset","type":"address"},{"internalType":"bytes","name":"metadata","type":"bytes"}],"name":"getPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address[]","name":"assets","type":"address[]"},{"internalType":"bytes[]","name":"metadata","type":"bytes[]"}],"name":"getPrices","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"bytes","name":"metadata","type":"bytes"}],"name":"getValue","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address[]","name":"assets","type":"address[]"},{"internalType":"uint256[]","name":"amounts","type":"uint256[]"},{"internalType":"bytes[]","name":"metadata","type":"bytes[]"}],"name":"getValues","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"implementation","outputs":[{"internalType":"contract IPricer","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"pendingOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"contract IPricer","name":"_implementation","type":"address"}],"name":"setImplementation","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newPendingOwner","type":"address"}],"name":"setPendingOwner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"}]')
+    
+    # Check if pricer is in chain config, otherwise use default
+    if 'pricer' in chain:
+        pricer_addr = chain['pricer']
+    else:
+        print(f"Warning: No pricer address in chain config, using project pricer or default")
+        pricer_addr = project.get('pricer', '0x7FA4b073CCf898c97299ac5aCEb5dE8d5Ef2c7f6')
+    
+    try:
+        pricer_addr = Web3.to_checksum_address(pricer_addr)
+    except AttributeError:
+        # For older web3.py versions
+        pricer_addr = Web3.toChecksumAddress(pricer_addr)
+        
+    pricer = web3.eth.contract(address=pricer_addr, abi='[{"inputs":[{"internalType":"address","name":"_owner","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"contract IPricer","name":"oldImplementation","type":"address"},{"indexed":true,"internalType":"contract IPricer","name":"newImplementation","type":"address"}],"name":"ImplementationChanged","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousPendingOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newPendingOwner","type":"address"}],"name":"PendingOwnershipTransferred","type":"event"},{"inputs":[{"internalType":"address","name":"asset","type":"address"},{"internalType":"bytes","name":"metadata","type":"bytes"}],"name":"getPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address[]","name":"assets","type":"address[]"},{"internalType":"bytes[]","name":"metadata","type":"bytes[]"}],"name":"getPrices","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"bytes","name":"metadata","type":"bytes"}],"name":"getValue","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address[]","name":"assets","type":"address[]"},{"internalType":"uint256[]","name":"amounts","type":"uint256[]"},{"internalType":"bytes[]","name":"metadata","type":"bytes[]"}],"name":"getValues","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"implementation","outputs":[{"internalType":"contract IPricer","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"pendingOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"contract IPricer","name":"_implementation","type":"address"}],"name":"setImplementation","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newPendingOwner","type":"address"}],"name":"setPendingOwner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"}]')
 
     mc = web3.eth.contract(address=project['mc_address'], abi=project['mc_abi'])
 
@@ -58,9 +72,24 @@ def fetch_all(chain, project, user):
   user_pending_rewards = False
   reward_rate_function_args = project.get("reward_rate_function_args", [])
 
+  # Get pricer address
+  if 'pricer' in chain:
+    pricer_addr = chain['pricer']
+  else:
+    print(f"Warning: No pricer address in chain config, using project pricer or default")
+    pricer_addr = project.get('pricer', '0x7FA4b073CCf898c97299ac5aCEb5dE8d5Ef2c7f6')
+  
+  try:
+    pricer_addr = Web3.to_checksum_address(pricer_addr)
+  except AttributeError:
+    # For older web3.py versions
+    pricer_addr = Web3.toChecksumAddress(pricer_addr)
+    
+  pricer_abi = '[{"inputs":[{"internalType":"address","name":"_owner","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"contract IPricer","name":"oldImplementation","type":"address"},{"indexed":true,"internalType":"contract IPricer","name":"newImplementation","type":"address"}],"name":"ImplementationChanged","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousPendingOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newPendingOwner","type":"address"}],"name":"PendingOwnershipTransferred","type":"event"},{"inputs":[{"internalType":"address","name":"asset","type":"address"},{"internalType":"bytes","name":"metadata","type":"bytes"}],"name":"getPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address[]","name":"assets","type":"address[]"},{"internalType":"bytes[]","name":"metadata","type":"bytes[]"}],"name":"getPrices","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"bytes","name":"metadata","type":"bytes"}],"name":"getValue","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address[]","name":"assets","type":"address[]"},{"internalType":"uint256[]","name":"amounts","type":"uint256[]"},{"internalType":"bytes[]","name":"metadata","type":"bytes[]"}],"name":"getValues","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"implementation","outputs":[{"internalType":"contract IPricer","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"pendingOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"contract IPricer","name":"_implementation","type":"address"}],"name":"setImplementation","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newPendingOwner","type":"address"}],"name":"setPendingOwner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"}]'
+
   # Synthetix like contracts are supported here
   if isinstance(project['mc_address'], list):
-    pricer = web3.eth.contract(address=chain['pricer'], abi='[{"inputs":[{"internalType":"address","name":"_owner","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"contract IPricer","name":"oldImplementation","type":"address"},{"indexed":true,"internalType":"contract IPricer","name":"newImplementation","type":"address"}],"name":"ImplementationChanged","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousPendingOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newPendingOwner","type":"address"}],"name":"PendingOwnershipTransferred","type":"event"},{"inputs":[{"internalType":"address","name":"asset","type":"address"},{"internalType":"bytes","name":"metadata","type":"bytes"}],"name":"getPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address[]","name":"assets","type":"address[]"},{"internalType":"bytes[]","name":"metadata","type":"bytes[]"}],"name":"getPrices","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"bytes","name":"metadata","type":"bytes"}],"name":"getValue","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address[]","name":"assets","type":"address[]"},{"internalType":"uint256[]","name":"amounts","type":"uint256[]"},{"internalType":"bytes[]","name":"metadata","type":"bytes[]"}],"name":"getValues","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"implementation","outputs":[{"internalType":"contract IPricer","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"pendingOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"contract IPricer","name":"_implementation","type":"address"}],"name":"setImplementation","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newPendingOwner","type":"address"}],"name":"setPendingOwner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"}]')
+    pricer = web3.eth.contract(address=pricer_addr, abi=pricer_abi)
     for mc_address in project['mc_address']:
       try:
         try:
@@ -106,15 +135,34 @@ def fetch_all(chain, project, user):
   # Masterchef like contracts are supported here
   else:
     try:
+      # Ensure the MC address is checksummed
+      if isinstance(project['mc_address'], str):
+        try:
+          if not web3.is_checksum_address(project['mc_address']):
+            project['mc_address'] = web3.to_checksum_address(project['mc_address'])
+        except AttributeError:
+          # For older web3.py versions
+          if not web3.isChecksumAddress(project['mc_address']):
+            project['mc_address'] = web3.toChecksumAddress(project['mc_address'])
+      
       mc = web3.eth.contract(address=project['mc_address'], abi=project['mc_abi'])
       multiplier = project.get('multiplier', 1)
       
+      # Ensure native token address is checksummed
+      try:
+        if not web3.is_checksum_address(project['native_token_address']):
+          project['native_token_address'] = web3.to_checksum_address(project['native_token_address'])
+      except AttributeError:
+        # For older web3.py versions
+        if not web3.isChecksumAddress(project['native_token_address']):
+          project['native_token_address'] = web3.toChecksumAddress(project['native_token_address'])
+          
       native_token = token_fetcher.to_contract(web3, project['native_token_address'])
       native_decimals = native_token.functions.decimals().call()
       
       reward_rate_raw = (multiplier * mc.get_function_by_signature(project['reward_rate_function'])(*reward_rate_function_args).call())/(10**native_decimals)
       reward_rate = reward_rate_raw if project['rewards_per_second'] else reward_rate_raw / chain['block_interval']
-      dollar_rewards_per_second = reward_rate * project['native_price']
+      dollar_rewards_per_second = reward_rate * project.get('native_price', 1.0)
 
       pool_length = project.get('poolLength', mc.functions.poolLength().call())
 

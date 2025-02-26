@@ -24,10 +24,24 @@ def fetch_configs(data):
     except Exception as e:
         print(f'Failed to parse {chain_config_location}: {e}')
   
-  project = projects[data['project_id']]
-  chain = chains[project['chain']]
+  # Check if the project exists
+  project_id = data['project_id']
+  if project_id not in projects:
+    print(f"Project '{project_id}' not found. Available projects: {list(projects.keys())}")
+    raise ValueError(f"Project '{project_id}' not found")
+    
+  project = projects[project_id]
+  
+  # Check if the chain exists
+  chain_name = project['chain']
+  if chain_name not in chains:
+    print(f"Chain '{chain_name}' not found. Available chains: {list(chains.keys())}")
+    raise ValueError(f"Chain '{chain_name}' not found")
+    
+  chain = chains[chain_name]
   project['parallel'] = data.get('parallel', False)
   project['lp_summary'] = data.get('lp_summary', False)
+  project['hide_no_rewards'] = data.get('hide_no_rewards', False)
 
   print_all(chains, projects)
 

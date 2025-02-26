@@ -2,12 +2,14 @@ config = {
     "name": "hog",
     "chain": "sonic",
     "chain_id": "sonic",
-    "mc_address": "0x2e585b96a2ef1661508110e41c005be86b63fc34",
-    "native_token_address": "0xB3804bF38bD170ef65b4De8536d19a8e3600C0A9",
+    "mc_address": "0x2E585B96A2Ef1661508110e41C005BE86B63fC34",  # Checksummed address
+    "native_token_address": "0x784dd93f3c42dcbf88d45e6ad6d3cc20da169a60",  # Updated to correct token address
     "reward_rate_function": "hogPerSecond()",
     "pending_rewards_function": "pendingHOG(uint256,address)",
     "allocPoints": 2,
     "rewards_per_second": True,
+    "native_price": 1.0,  # Default price
+    "native_decimals": 18,  # Default decimals
     "violin_strategy": {
         "carlos": "0x2193FB55FADa89c88c84F80fC78dB2FBd78325F5",
         "mk": "0xb4a450C73bcf1ECab8392C148251373185a823e4"
