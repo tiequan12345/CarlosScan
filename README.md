@@ -2,8 +2,6 @@
 
 A comprehensive DeFi analytics tool for fetching and displaying project details, including pool information, TVL, APR, and user positions across multiple blockchains and protocols.
 
-![CarlosScan Dashboard](image-20220116-004029.png)
-
 ## Overview
 
 CarlosScan provides both a web dashboard and command-line interface for:
