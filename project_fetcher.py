@@ -29,8 +29,15 @@ def fetch_all(chain, project, wallet, strategy=""):
   try:
     native_token = token_fetcher.to_contract(web3, project['native_token_address'])
     native_decimals = native_token.functions.decimals().call()
-    native_name = native_token.functions.name().call()
-    native_symbol = native_token.functions.symbol().call()
+    
+    # Use explicit values from config if available, otherwise get from contract
+    native_name = project.get('native_name')
+    if not native_name:
+      native_name = native_token.functions.name().call()
+      
+    native_symbol = project.get('native_symbol')
+    if not native_symbol:
+      native_symbol = native_token.functions.symbol().call()
   except Exception as e:
     native_decimals = 18  # Default to 18 decimals
     native_name = "Unknown Token"

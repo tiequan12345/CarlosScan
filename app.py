@@ -43,6 +43,8 @@ def get_token_price(chain_id, token_address):
         try:
             # Try multiple price sources
             price = None
+            token_name = None
+            token_symbol = None
             
             # 1. Try DexScreener API first
             try:
@@ -56,8 +58,14 @@ def get_token_price(chain_id, token_address):
                     data = response.json()
                     if data and 'pairs' in data and data['pairs'] and len(data['pairs']) > 0:
                         price = float(data['pairs'][0]['priceUsd'])
+                        # Get token info from the baseToken or quoteToken depending on which matches our address
+                        if 'baseToken' in data['pairs'][0] and data['pairs'][0]['baseToken']['address'].lower() == token_address.lower():
+                            token_name = data['pairs'][0]['baseToken'].get('name')
+                            token_symbol = data['pairs'][0]['baseToken'].get('symbol')
+                        elif 'quoteToken' in data['pairs'][0] and data['pairs'][0]['quoteToken']['address'].lower() == token_address.lower():
+                            token_name = data['pairs'][0]['quoteToken'].get('name')
+                            token_symbol = data['pairs'][0]['quoteToken'].get('symbol')
                     else:
-                        
                         # If pairs endpoint failed, try tokens endpoint
                         tokens_url = f"https://api.dexscreener.com/latest/dex/tokens/{token_address}"
                         tokens_response = requests.get(tokens_url, timeout=10)
@@ -68,7 +76,15 @@ def get_token_price(chain_id, token_address):
                                 for pair in tokens_data['pairs']:
                                     if 'chainId' in pair and pair['chainId'] == chain_id:
                                         price = float(pair['priceUsd'])
-                                        break
+                                        # Get token info from the baseToken or quoteToken
+                                        if 'baseToken' in pair and pair['baseToken']['address'].lower() == token_address.lower():
+                                            token_name = pair['baseToken'].get('name')
+                                            token_symbol = pair['baseToken'].get('symbol')
+                                            break
+                                        elif 'quoteToken' in pair and pair['quoteToken']['address'].lower() == token_address.lower():
+                                            token_name = pair['quoteToken'].get('name')
+                                            token_symbol = pair['quoteToken'].get('symbol')
+                                            break
                             else:
                                 print(f"DexScreener tokens API returned no data: {tokens_response.text}") # Keep incase response is useful for debugging in future.
                         else:
@@ -89,6 +105,11 @@ def get_token_price(chain_id, token_address):
                         data = response.json()
                         if data and 'data' in data and 'price' in data['data']:
                             price = float(data['data']['price'])
+                            # Try to get token name and symbol from DexTools response
+                            if 'name' in data['data']:
+                                token_name = data['data']['name']
+                            if 'symbol' in data['data']:
+                                token_symbol = data['data']['symbol']
                 except Exception as e:
                     print(f"Error using DexTools API: {str(e)}") # Keep incase response is useful for debugging in future.
             
@@ -107,7 +128,15 @@ def get_token_price(chain_id, token_address):
                                 for pair in alt_data['pairs']:
                                     if 'chainId' in pair and pair['chainId'] == chain_id:
                                         price = float(pair['priceUsd'])
-                                        break
+                                        # Get token info from the pair data
+                                        if 'baseToken' in pair and pair['baseToken']['address'].lower() == alt_token_address:
+                                            token_name = pair['baseToken'].get('name')
+                                            token_symbol = pair['baseToken'].get('symbol')
+                                            break
+                                        elif 'quoteToken' in pair and pair['quoteToken']['address'].lower() == alt_token_address:
+                                            token_name = pair['quoteToken'].get('name')
+                                            token_symbol = pair['quoteToken'].get('symbol')
+                                            break
                 except Exception as alt_err:
                     print(f"Error trying alternative address format: {str(alt_err)}") # Keep incase response is useful for debugging in future.
             
@@ -115,15 +144,22 @@ def get_token_price(chain_id, token_address):
             if price is not None and price > 0:
                 cache['token_prices'][cache_key] = price
                 cache['last_price_update'][cache_key] = current_time
-                return price
+                # Store token info in cache
+                if token_name and token_symbol:
+                    cache_token_info_key = f"{chain_id}_{token_address}_info"
+                    cache['token_prices'][cache_token_info_key] = {
+                        'name': token_name,
+                        'symbol': token_symbol
+                    }
+                return price, token_name, token_symbol
             else:
                 # Return cached price if available, otherwise None
-                return cache['token_prices'].get(cache_key, 1.0)  # Default to 1.0 if no price available
+                return cache['token_prices'].get(cache_key, 1.0), None, None  # Default to 1.0 if no price available
             
         except Exception as e:
             print(f"Error in price fetching process: {str(e)}")  # Keep incase response is useful for debugging in future.
             # Return cached price if available, otherwise None
-            return cache['token_prices'].get(cache_key, 1.0)  # Default to 1.0 if no price available
+            return cache['token_prices'].get(cache_key, 1.0), None, None  # Default to 1.0 if no price available
 
 def get_projects_and_chains():
     """Get list of available projects and chains"""
@@ -270,12 +306,26 @@ def fetch_data():
         if chain_id and 'native_token_address' in fetched_project:
             token_address = fetched_project['native_token_address']
             
-            # Try to get updated price
-            updated_price = get_token_price(chain_id, token_address)
+            # Try to get updated price and token info
+            price_data = get_token_price(chain_id, token_address)
+            
+            if isinstance(price_data, tuple) and len(price_data) >= 3:
+                updated_price, token_name, token_symbol = price_data
+            else:
+                updated_price = price_data
+                token_name = None
+                token_symbol = None
+                
             if updated_price is not None:
                 # Update the price in the fetched project data
                 old_price = fetched_project['native_price']
                 fetched_project['native_price'] = updated_price
+                
+                # Update token name and symbol if available from API
+                if token_name:
+                    fetched_project['native_name'] = token_name
+                if token_symbol:
+                    fetched_project['native_symbol'] = token_symbol
                 
                 # Recalculate dollar rewards per second with new price
                 if 'reward_rate' in fetched_project:

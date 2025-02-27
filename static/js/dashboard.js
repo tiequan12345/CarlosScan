@@ -159,7 +159,17 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update project overview card
         document.getElementById('projectName').textContent = data.project_name;
-        document.getElementById('nativeTokenInfo').textContent = `${data.native_name} (${data.native_symbol})`;
+        
+        // Display actual token name and symbol (not LP token name)
+        let nativeTokenDisplay = `${data.native_name} (${data.native_symbol})`;
+        
+        // Make sure we're not displaying LP token information
+        if (data.native_name && data.native_name.includes('/')) {
+            // This looks like an LP token name (e.g. "Token1/Token2")
+            // Force it to use just the symbol which is more likely to be accurate
+            nativeTokenDisplay = data.native_symbol;
+        }
+        document.getElementById('nativeTokenInfo').textContent = nativeTokenDisplay;
         document.getElementById('tokenPrice').textContent = formatter.format(data.native_price);
         document.getElementById('totalTvl').textContent = formatter.format(data.total_value_locked);
         document.getElementById('rewardRate').textContent = `${data.reward_rate.toFixed(4)} ${data.native_symbol}/second (${formatter.format(data.dollar_rewards_per_second)}/second)`;

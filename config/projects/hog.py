@@ -10,6 +10,8 @@ config = {
     "rewards_per_second": True,
     "native_price": 1.0,  # Default price
     "native_decimals": 18,  # Default decimals
+    "native_name": "HOG",  # Explicitly set token name
+    "native_symbol": "HOG",  # Explicitly set token symbol
     "violin_strategy": {
         "carlos": "0x2193FB55FADa89c88c84F80fC78dB2FBd78325F5",
         "mk": "0xb4a450C73bcf1ECab8392C148251373185a823e4"
